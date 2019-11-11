@@ -75,7 +75,7 @@ __global__ void mix_init(int32_t *perm, int n, int k, const int32_t *is_input, i
 __forceinline__
 __device__ float mix_kernel(const int is_forward, float prox_lam,
         int m, int k, const int32_t *__restrict__ index, 
-        const float *__restrict__ S, const float *__restrict__ dz, float *__restrict__ V, const float *__restrict__ Vproj, float *__restrict__ W, 
+        float *__restrict__ S, const float *__restrict__ dz, float *__restrict__ V, const float *__restrict__ Vproj, float *__restrict__ W, 
         float *__restrict__ gnrm, const float *__restrict__ Snrms, float *smem)
 {
 
@@ -94,7 +94,7 @@ __device__ float mix_kernel(const int is_forward, float prox_lam,
     if (threadIdx.x==0) delta = 0;
 
     for (int i, i_=0; (i=index[i_]); i_++) {
-		Si = S + i * m;
+        Si = S+i*m;
         for (int j=threadIdx.x; j<m; j += blockDim.x) Si[j] = S[i*m+j];
         __syncthreads();
 
@@ -142,7 +142,7 @@ __device__ float mix_kernel(const int is_forward, float prox_lam,
 }
 
 // consider the \min unsat problem,
-__global__ void mix_forward(int max_iter, float eps, int n, int m, int k, const int32_t *index, int32_t *niter, const float *S, float *z, float *V, float *W, float *gnrm, float *Snrms, float *cache)
+__global__ void mix_forward(int max_iter, float eps, int n, int m, int k, const int32_t *index, int32_t *niter, float *S, float *z, float *V, float *W, float *gnrm, float *Snrms, float *cache)
 {
     z +=        n * blockIdx.x;
     index +=    n * blockIdx.x;
@@ -170,7 +170,7 @@ __global__ void mix_forward(int max_iter, float eps, int n, int m, int k, const 
 
 }
 
-__global__ void mix_backward(float prox_lam, int n, int m, int k, int32_t *is_input, int32_t *index, int32_t *niter, const float *S, float *dS, float *z, float *dz, const float *V, float *U, float *W, float *Phi, float *gnrm, float *Snrms, float *cache)
+__global__ void mix_backward(float prox_lam, int n, int m, int k, int32_t *is_input, int32_t *index, int32_t *niter, float *S, float *dS, float *z, float *dz, const float *V, float *U, float *W, float *Phi, float *gnrm, float *Snrms, float *cache)
 {
     gnrm += n * blockIdx.x;
     z +=    n * blockIdx.x;
