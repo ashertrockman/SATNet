@@ -83,8 +83,8 @@ __device__ float mix_kernel(const int is_forward, float prox_lam,
     const int lane = threadIdx.x % WARP_SIZE;
 
     float * __restrict__ g =    smem;
-    float * __restrict__ Si =   smem+k;
-    float * __restrict__ Wbuf = smem+k+m; // smem buf for the first MBUF_SIZE W
+    float * __restrict__ Si =   NULL;
+    float * __restrict__ Wbuf = smem+k; // smem buf for the first MBUF_SIZE W
 
     int mbuf = m>MBUF_SIZE ?   MBUF_SIZE : m; // mbuf = # of m inside buffer (in smem)
     int mrem = m>MBUF_SIZE ? m-MBUF_SIZE : 0; // mrem = # of m outside buffer (in global mem)
@@ -94,6 +94,7 @@ __device__ float mix_kernel(const int is_forward, float prox_lam,
     if (threadIdx.x==0) delta = 0;
 
     for (int i, i_=0; (i=index[i_]); i_++) {
+		Si = S + i * m;
         for (int j=threadIdx.x; j<m; j += blockDim.x) Si[j] = S[i*m+j];
         __syncthreads();
 
@@ -262,7 +263,7 @@ void mix_init_launcher_cuda(mix_t mix, int32_t *perm, cudaStream_t stream)
 
 void mix_forward_launcher_cuda(mix_t mix, int max_iter, float eps, cudaStream_t stream)
 {
-    int smem_size = (mix.m+mix.k*(1+MBUF_SIZE))*sizeof(float);
+    int smem_size = (mix.k*(1+MBUF_SIZE))*sizeof(float);
     mix_forward<<<mix.b,WARP_SIZE*WARP_NUM,smem_size,stream>>>(max_iter, eps,
             mix.n, mix.m, mix.k, mix.index, mix.niter, 
             mix.S, mix.z, mix.V, mix.W, mix.gnrm, mix.Snrms, mix.cache);
@@ -270,7 +271,7 @@ void mix_forward_launcher_cuda(mix_t mix, int max_iter, float eps, cudaStream_t 
 
 void mix_backward_launcher_cuda(mix_t mix, float prox_lam, cudaStream_t stream)
 {
-    int smem_size = (mix.m+mix.k*(1+MBUF_SIZE))*sizeof(float);
+    int smem_size = (mix.k*(1+MBUF_SIZE))*sizeof(float);
     mix_backward<<<mix.b,WARP_SIZE*WARP_NUM,smem_size,stream>>>(prox_lam,
            mix.n, mix.m, mix.k, mix.is_input, mix.index, mix.niter, 
            mix.S, mix.dS, mix.z, mix.dz, mix.V, mix.U, mix.W, mix.Phi, mix.gnrm, mix.Snrms, mix.cache);
